@@ -1,0 +1,18 @@
+services:
+  openilink-hub:
+    image: openilink/openilink-hub:latest
+    container_name: openilink-hub
+    restart: unless-stopped
+    ports:
+      - "${HUB_PORT:-9800}:9800"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - LISTEN=0.0.0.0:9800
+      - DATABASE_URL=/var/lib/openilink-hub/openilink.db
+      - RP_ORIGIN=${RP_ORIGIN}
+      - RP_ID=${RP_ID}
+      - RP_NAME=${RP_NAME:-OpeniLink Hub}
+      - SECRET=${SECRET}
+    volumes:
+      - ./data:/var/lib/openilink-hub

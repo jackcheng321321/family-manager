@@ -1,0 +1,19 @@
+{
+  "name": "caiwumanager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "家庭管理系统 — 自托管的家庭财务、资产与健康记录管理，支持微信 AI 录入",
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm -r build",
+    "build:backend": "pnpm --filter backend build",
+    "build:frontend": "pnpm --filter frontend build",
+    "db:generate": "pnpm --filter backend db:generate",
+    "db:migrate": "pnpm --filter backend db:migrate"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
