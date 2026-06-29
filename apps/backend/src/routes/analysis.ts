@@ -1,10 +1,50 @@
 import type { FinancialAnalysisRequest } from "@caiwu/shared";
 import type { FastifyInstance } from "fastify";
-import { generateFinancialAnalysis } from "../ai/financial-analysis.js";
+import {
+  generateFinancialAnalysis,
+  getSavedFinancialAnalysis,
+  listFinancialAnalyses,
+  saveFinancialAnalysis,
+} from "../ai/financial-analysis.js";
 import { authGuard } from "../middleware/auth.js";
 
 export async function analysisRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authGuard);
+
+  app.get(
+    "/saved",
+    {
+      schema: {
+        tags: ["analysis"],
+        summary: "已保存的月度分析历史列表",
+      },
+    },
+    async () => {
+      return listFinancialAnalyses();
+    }
+  );
+
+  app.get<{ Params: { month: string } }>(
+    "/saved/:month",
+    {
+      schema: {
+        tags: ["analysis"],
+        summary: "读取某个月已保存的分析",
+        params: {
+          type: "object",
+          required: ["month"],
+          properties: {
+            month: { type: "string", pattern: "^\\d{4}-\\d{2}$" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const saved = getSavedFinancialAnalysis(request.params.month);
+      if (!saved) return reply.status(404).send({ error: "该月份还没有分析记录" });
+      return saved;
+    }
+  );
 
   app.post<{ Body: FinancialAnalysisRequest }>(
     "/monthly",
@@ -32,6 +72,7 @@ export async function analysisRoutes(app: FastifyInstance) {
       try {
         request.log.info({ month }, "Generating monthly AI financial analysis");
         const result = await generateFinancialAnalysis(month);
+        saveFinancialAnalysis(result);
         request.log.info(
           {
             month: result.month,

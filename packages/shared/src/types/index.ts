@@ -371,6 +371,15 @@ export interface FinancialAnalysisResponse {
   snapshot: FinancialAnalysisSnapshot;
 }
 
+// 已保存的月度分析摘要（用于历史列表）
+export interface FinancialAnalysisSummary {
+  month: string;
+  generatedAt: string;
+  totalExpense: number;
+  expenseTransactionCount: number;
+  expenseChangeAmount: number;
+}
+
 // AI parsing result
 export interface ParsedTransaction {
   type: TransactionType;

@@ -241,6 +241,19 @@ export const medicalVisitMedications = sqliteTable(
   (table) => [index("idx_medical_visit_medications_visit").on(table.visitId)]
 );
 
+// ---- AI 月度财务分析（持久化） ----
+
+export const financialAnalyses = sqliteTable("financial_analyses", {
+  id: text("id").primaryKey(),
+  month: text("month").notNull().unique(),
+  analysis: text("analysis").notNull(),
+  // FinancialAnalysisSnapshot 的 JSON 序列化
+  snapshot: text("snapshot").notNull(),
+  generatedAt: text("generated_at").notNull(),
+  createdAt: text("created_at").notNull().default("(datetime('now'))"),
+  updatedAt: text("updated_at").notNull().default("(datetime('now'))"),
+});
+
 export const messageLog = sqliteTable("message_log", {
   id: text("id").primaryKey(),
   installationId: text("installation_id").notNull(),

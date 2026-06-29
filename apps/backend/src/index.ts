@@ -170,6 +170,15 @@ function initDatabase() {
       bot_id TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS financial_analyses (
+      id TEXT PRIMARY KEY,
+      month TEXT NOT NULL UNIQUE,
+      analysis TEXT NOT NULL,
+      snapshot TEXT NOT NULL,
+      generated_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS message_log (
       id TEXT PRIMARY KEY,
       installation_id TEXT NOT NULL,

@@ -32,8 +32,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <aside className="flex min-h-screen w-60 flex-col border-r bg-card p-4">
       <div className="mb-8 px-2">
-        <h1 className="text-lg font-bold">🏠 家庭管理</h1>
-        <p className="text-xs text-muted-foreground mt-1">系统</p>
+        <h1 className="text-lg font-bold">🏠 家庭管理系统</h1>
       </div>
       <nav className="flex-1 space-y-1">
         {navItems.map((item) => (

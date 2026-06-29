@@ -39,8 +39,8 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-muted">
       <div className="bg-card p-8 rounded-lg shadow-sm border w-full max-w-sm">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold">🏠 家庭管理</h1>
-          <p className="text-sm text-muted-foreground mt-1">系统登录</p>
+          <h1 className="text-2xl font-bold">🏠 家庭管理系统</h1>
+          <p className="text-sm text-muted-foreground mt-1">登录</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (

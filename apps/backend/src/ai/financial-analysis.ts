@@ -4,12 +4,14 @@ import type {
   FinancialAnalysisRecurringCandidate,
   FinancialAnalysisResponse,
   FinancialAnalysisSnapshot,
+  FinancialAnalysisSummary,
   FinancialAnalysisTopTransaction,
   MemberStat,
 } from "@caiwu/shared";
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { db } from "../db/connection.js";
-import { assets, categories, members, transactions } from "../db/schema.js";
+import { assets, categories, financialAnalyses, members, transactions } from "../db/schema.js";
 import { getMonthDateRange, getPreviousMonth } from "../utils/date.js";
 import { chat } from "./deepseek.js";
 import { getFinancialAnalysisPrompt } from "./prompts.js";
@@ -392,4 +394,78 @@ export async function generateFinancialAnalysis(month: string): Promise<Financia
     analysis,
     snapshot,
   };
+}
+
+// ---- 持久化：保存 / 读取 / 历史列表 ----
+
+// 按月保存分析结果（存在则覆盖，实现「重新生成」）
+export function saveFinancialAnalysis(result: FinancialAnalysisResponse): void {
+  const now = new Date().toISOString();
+  const snapshotJson = JSON.stringify(result.snapshot);
+  const existing = db
+    .select({ id: financialAnalyses.id })
+    .from(financialAnalyses)
+    .where(eq(financialAnalyses.month, result.month))
+    .get();
+
+  if (existing) {
+    db.update(financialAnalyses)
+      .set({
+        analysis: result.analysis,
+        snapshot: snapshotJson,
+        generatedAt: result.generatedAt,
+        updatedAt: now,
+      })
+      .where(eq(financialAnalyses.month, result.month))
+      .run();
+  } else {
+    db.insert(financialAnalyses)
+      .values({
+        id: nanoid(),
+        month: result.month,
+        analysis: result.analysis,
+        snapshot: snapshotJson,
+        generatedAt: result.generatedAt,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+  }
+}
+
+// 读取某个月已保存的分析，没有则返回 null
+export function getSavedFinancialAnalysis(month: string): FinancialAnalysisResponse | null {
+  const normalizedMonth = assertMonth(month);
+  const row = db
+    .select()
+    .from(financialAnalyses)
+    .where(eq(financialAnalyses.month, normalizedMonth))
+    .get();
+  if (!row) return null;
+
+  return {
+    month: row.month,
+    generatedAt: row.generatedAt,
+    analysis: row.analysis,
+    snapshot: JSON.parse(row.snapshot) as FinancialAnalysisSnapshot,
+  };
+}
+
+// 历史列表（按月份倒序），仅返回摘要信息
+export function listFinancialAnalyses(): FinancialAnalysisSummary[] {
+  return db
+    .select()
+    .from(financialAnalyses)
+    .orderBy(desc(financialAnalyses.month))
+    .all()
+    .map((row) => {
+      const snapshot = JSON.parse(row.snapshot) as FinancialAnalysisSnapshot;
+      return {
+        month: row.month,
+        generatedAt: row.generatedAt,
+        totalExpense: snapshot.totalExpense,
+        expenseTransactionCount: snapshot.expenseTransactionCount,
+        expenseChangeAmount: snapshot.expenseChangeAmount,
+      };
+    });
 }

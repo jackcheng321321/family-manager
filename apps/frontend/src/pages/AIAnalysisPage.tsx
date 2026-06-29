@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "@/api/client";
+import { Markdown } from "@/components/Markdown";
 import { getBusinessToday } from "@/lib/date";
-import type { FinancialAnalysisResponse } from "@caiwu/shared";
-import { AlertCircle, Brain, Loader2, RefreshCw } from "lucide-react";
+import type { FinancialAnalysisResponse, FinancialAnalysisSummary } from "@caiwu/shared";
+import { AlertCircle, Brain, History, Loader2, RefreshCw } from "lucide-react";
 
 function formatCurrency(value: number): string {
   return `¥${value.toFixed(2)}`;
@@ -18,20 +19,71 @@ export function AIAnalysisPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [month, setMonth] = useState(searchParams.get("month") || getDefaultMonth());
   const [result, setResult] = useState<FinancialAnalysisResponse | null>(null);
+  const [history, setHistory] = useState<FinancialAnalysisSummary[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingSaved, setLoadingSaved] = useState(false);
   const [error, setError] = useState("");
+  // 单调递增的请求序号：切换月份/生成时只让「最后一次」操作的结果生效，避免旧请求覆盖
+  const reqSeq = useRef(0);
+
+  const loadHistory = async () => {
+    try {
+      const list = await api.get<FinancialAnalysisSummary[]>("/analysis/saved");
+      setHistory(list);
+    } catch {
+      // 历史列表加载失败不阻塞主流程
+    }
+  };
+
+  const loadSaved = async (targetMonth: string) => {
+    const myId = ++reqSeq.current;
+    setLoadingSaved(true);
+    setError("");
+    try {
+      const saved = await api.get<FinancialAnalysisResponse>(
+        `/analysis/saved/${targetMonth}`
+      );
+      if (reqSeq.current === myId) setResult(saved);
+    } catch {
+      // 该月还没有保存的分析记录
+      if (reqSeq.current === myId) setResult(null);
+    } finally {
+      if (reqSeq.current === myId) setLoadingSaved(false);
+    }
+  };
+
+  // 首次加载历史列表
+  useEffect(() => {
+    void loadHistory();
+  }, []);
+
+  // 月份变化时读取已保存的分析
+  useEffect(() => {
+    void loadSaved(month);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [month]);
+
+  const selectMonth = (next: string) => {
+    if (!next) return;
+    setMonth(next);
+    setSearchParams({ month: next });
+  };
 
   const generateAnalysis = async () => {
+    const myId = ++reqSeq.current;
     setLoading(true);
     setError("");
     try {
       const response = await api.post<FinancialAnalysisResponse>("/analysis/monthly", { month });
-      setResult(response);
-      setSearchParams({ month });
+      if (reqSeq.current === myId) {
+        setResult(response);
+        setSearchParams({ month });
+      }
+      void loadHistory();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "AI 分析生成失败");
+      if (reqSeq.current === myId) setError(err instanceof Error ? err.message : "AI 分析生成失败");
     } finally {
-      setLoading(false);
+      if (reqSeq.current === myId) setLoading(false);
     }
   };
 
@@ -50,7 +102,7 @@ export function AIAnalysisPage() {
           <input
             type="month"
             value={month}
-            onChange={(event) => setMonth(event.target.value)}
+            onChange={(event) => selectMonth(event.target.value)}
             className="h-10 rounded-md border px-3 text-sm"
           />
           <button
@@ -64,6 +116,36 @@ export function AIAnalysisPage() {
         </div>
       </div>
 
+      {history.length > 0 && (
+        <div className="rounded-lg border bg-card p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <History className="h-4 w-4" />
+            历史分析
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {history.map((item) => {
+              const active = item.month === month;
+              return (
+                <button
+                  key={item.month}
+                  onClick={() => selectMonth(item.month)}
+                  className={`rounded-md border px-3 py-1.5 text-left text-sm transition-colors ${
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "hover:bg-accent"
+                  }`}
+                >
+                  <span className="font-medium">{item.month}</span>
+                  <span className={`ml-2 text-xs ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                    {formatCurrency(item.totalExpense)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <AlertCircle className="mt-0.5 h-4 w-4 flex-none" />
@@ -71,9 +153,16 @@ export function AIAnalysisPage() {
         </div>
       )}
 
-      {!result && !loading && (
+      {!result && !loading && !loadingSaved && (
         <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-          选择月份后生成分析
+          {month} 还没有分析记录，点击「生成分析」开始
+        </div>
+      )}
+
+      {loadingSaved && !loading && !result && (
+        <div className="flex items-center justify-center gap-2 rounded-lg border bg-card p-8 text-sm text-muted-foreground">
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          加载中
         </div>
       )}
 
@@ -95,7 +184,7 @@ export function AIAnalysisPage() {
               <Brain className="h-5 w-5 text-primary" />
               <h3 className="font-medium">分析结果</h3>
             </div>
-            <div className="whitespace-pre-wrap text-sm leading-7 text-foreground">{result.analysis}</div>
+            <Markdown content={result.analysis} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
