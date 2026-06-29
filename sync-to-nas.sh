@@ -62,6 +62,7 @@ rsync \
   --exclude '._*' \
   --exclude '.vite/' \
   --exclude '*.log' \
+  --exclude 'docker-compose.yml' \
   "$PROJECT_ROOT/" "$NAS_TARGET/"
 
 echo ""
