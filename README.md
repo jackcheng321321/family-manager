@@ -256,11 +256,38 @@ RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apk/re
 <details>
 <summary><b>图片记账没反应 / 只认文字不认截图</b></summary>
 
-图片识别走阿里云百炼，是可选能力，需要单独配置。
-`docker-compose.yml` 目前没有透传 `DASHSCOPE_*` 环境变量，
-所以 Docker 部署下请在后台 **「系统设置 → 图片识别」** 里填 Key 和模型（`vision.*` 设置项会覆盖环境变量）。
+图片识别走阿里云百炼，是**可选**能力，不配置就只有文字/语音记账。
+
+在 `.env` 里填上即可（`docker-compose.yml` 会透传这三个变量）：
+
+```dotenv
+DASHSCOPE_API_KEY=sk-xxxx
+DASHSCOPE_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+DASHSCOPE_VL_MODEL=qwen3-vl-flash
+```
+
+也可以在后台 **「系统设置 → 图片识别」** 里填，`vision.*` 设置项会覆盖环境变量。
 
 另外注意图片体积：内联给模型的上限约 10MB。
+</details>
+
+<details>
+<summary><b><code>pnpm db:migrate</code> 是干什么的？我需要跑吗？</b></summary>
+
+**正常使用不需要跑。** 应用启动时会自动建好所有表，直接 `pnpm dev` 或 `docker compose up` 即可。
+
+`apps/backend/src/db/migrations/` 里的迁移文件主要有两个用途：
+
+1. 作为 schema 的版本历史；
+2. 贡献者改完 `schema.ts` 后跑 `pnpm db:generate`，drizzle 需要这份快照才能生成**增量**迁移，
+   否则会从零重新生成一遍。
+
+如果你在一个应用已经启动过的数据库上执行 `pnpm db:migrate`，脚本会先把初始迁移登记为基线再继续，
+不会重复建表、也不会动你已有的数据。
+
+> ⚠️ 已知限制：目前建表逻辑有两处来源 —— 应用启动时的 `initDatabase()` 和 drizzle 迁移文件。
+> 两者当前完全一致（`pnpm db:generate` 检测无差异），但长期看应当收敛为只用迁移。
+
 </details>
 
 <details>
