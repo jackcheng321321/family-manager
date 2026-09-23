@@ -20,7 +20,7 @@ const SECTIONS = [
     description: "qwen3-vl-flash 识别消费小票/支付截图并直接记账，留空则用 .env 里的 DASHSCOPE_* 配置",
     fields: [
       { key: "vision.api_key", label: "API Key", type: "password", placeholder: "sk-..." },
-      { key: "vision.base_url", label: "API 地址", type: "text", placeholder: "https://dashscope.aliyuncs.com/compatible-mode/v1" },
+      { key: "vision.base_url", label: "API 地址", type: "text", placeholder: "https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1" },
       { key: "vision.model", label: "模型名称", type: "text", placeholder: "qwen3-vl-flash" },
       { key: "vision.prompt", label: "图片解析提示词", type: "textarea", placeholder: "你是一个家庭财务助手。用户会发送一张图片..." },
     ],
