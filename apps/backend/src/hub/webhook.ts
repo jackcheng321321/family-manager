@@ -8,7 +8,7 @@ import { parseAndSaveMessage, finalizeAndSave } from "../ai/parser.js";
 import { parseImageTransaction } from "../ai/dashscope.js";
 import { downloadMediaAsDataUrl } from "./media.js";
 import { sendBotMessage } from "./bot-api.js";
-import { getMonthDateRange } from "../utils/date.js";
+import { getBusinessToday, getMonthDateRange } from "../utils/date.js";
 
 interface LegacyHubEvent {
   type?: string;
@@ -372,7 +372,7 @@ async function handleCommand(command: string, senderId: string, installationId: 
   } else if (cmd === "/recent") {
     const { transactions: txTable, categories: catTable } = await import("../db/schema.js");
     const { members: memTable } = await import("../db/schema.js");
-    const { desc } = await import("drizzle-orm");
+    const { and, desc, isNull, lte, or } = await import("drizzle-orm");
 
     const member = db.select().from(memTable).where(eq(memTable.wechatUserId, senderId)).get();
     if (!member) {
@@ -380,10 +380,16 @@ async function handleCommand(command: string, senderId: string, installationId: 
       return;
     }
 
+    // 网页端录入的分期会一次生成所有期数，未到扣款日的不展示
     const recent = db
       .select()
       .from(txTable)
-      .where(eq(txTable.memberId, member.id))
+      .where(
+        and(
+          eq(txTable.memberId, member.id),
+          or(isNull(txTable.installmentPlanId), lte(txTable.transactionDate, getBusinessToday()))
+        )
+      )
       .orderBy(desc(txTable.createdAt))
       .limit(5)
       .all();

@@ -1,9 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { db } from "../db/connection.js";
-import { transactions, categories, accounts, members } from "../db/schema.js";
-import { eq, and, gte, lte, like, desc, sql } from "drizzle-orm";
+import { transactions, categories, accounts, members, installmentPlans } from "../db/schema.js";
+import { eq, and, gte, lte, like, desc, sql, or, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { authGuard } from "../middleware/auth.js";
+import { getBusinessToday } from "../utils/date.js";
+
+const INSTALLMENT_LOCKED = "这是分期计划生成的记录，请在分期计划中修改或删除";
 
 export async function transactionRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authGuard);
@@ -20,6 +23,7 @@ export async function transactionRoutes(app: FastifyInstance) {
       minAmount?: string;
       maxAmount?: string;
       keyword?: string;
+      includeFutureInstallments?: string;
     };
   }>("/", async (request) => {
     const {
@@ -33,6 +37,7 @@ export async function transactionRoutes(app: FastifyInstance) {
       minAmount,
       maxAmount,
       keyword,
+      includeFutureInstallments,
     } = request.query;
 
     const pageNum = Math.max(1, Number(page));
@@ -48,6 +53,12 @@ export async function transactionRoutes(app: FastifyInstance) {
     if (minAmount) conditions.push(gte(transactions.amount, Number(minAmount)));
     if (maxAmount) conditions.push(lte(transactions.amount, Number(maxAmount)));
     if (keyword) conditions.push(like(transactions.description, `%${keyword}%`));
+    // 默认隐藏还没到扣款日的分期记录，避免几年后的期数堆在列表顶部
+    if (includeFutureInstallments !== "true") {
+      conditions.push(
+        or(isNull(transactions.installmentPlanId), lte(transactions.transactionDate, getBusinessToday()))!
+      );
+    }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -71,7 +82,14 @@ export async function transactionRoutes(app: FastifyInstance) {
       const category = db.select().from(categories).where(eq(categories.id, t.categoryId)).get();
       const account = t.accountId ? db.select().from(accounts).where(eq(accounts.id, t.accountId)).get() : null;
       const member = db.select().from(members).where(eq(members.id, t.memberId)).get();
-      return { ...t, category, account, member };
+      const installmentPlan = t.installmentPlanId
+        ? db
+            .select({ id: installmentPlans.id, periods: installmentPlans.periods, payoffDate: installmentPlans.payoffDate })
+            .from(installmentPlans)
+            .where(eq(installmentPlans.id, t.installmentPlanId))
+            .get()
+        : null;
+      return { ...t, category, account, member, installmentPlan };
     });
 
     return {
@@ -131,6 +149,7 @@ export async function transactionRoutes(app: FastifyInstance) {
       const { id } = request.params;
       const existing = db.select().from(transactions).where(eq(transactions.id, id)).get();
       if (!existing) return reply.status(404).send({ error: "Not found" });
+      if (existing.installmentPlanId) return reply.status(400).send({ error: INSTALLMENT_LOCKED });
 
       const allowed = ["type", "amount", "description", "categoryId", "accountId", "memberId", "transactionDate", "note"];
       const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
@@ -147,6 +166,7 @@ export async function transactionRoutes(app: FastifyInstance) {
     const { id } = request.params;
     const existing = db.select().from(transactions).where(eq(transactions.id, id)).get();
     if (!existing) return reply.status(404).send({ error: "Not found" });
+    if (existing.installmentPlanId) return reply.status(400).send({ error: INSTALLMENT_LOCKED });
     db.delete(transactions).where(eq(transactions.id, id)).run();
     return { success: true };
   });

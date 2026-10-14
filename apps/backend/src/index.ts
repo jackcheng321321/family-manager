@@ -12,6 +12,7 @@ import { authRoutes } from "./routes/auth.js";
 import { analysisRoutes } from "./routes/analysis.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { transactionRoutes } from "./routes/transactions.js";
+import { installmentRoutes } from "./routes/installments.js";
 import { assetRoutes } from "./routes/assets.js";
 import { liabilityRoutes } from "./routes/liabilities.js";
 import { insuranceRoutes } from "./routes/insurance.js";
@@ -98,6 +99,20 @@ function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type);
     CREATE INDEX IF NOT EXISTS idx_transactions_member ON transactions(member_id);
     CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category_id);
+    CREATE TABLE IF NOT EXISTS installment_plans (
+      id TEXT PRIMARY KEY,
+      description TEXT NOT NULL,
+      total_amount REAL NOT NULL,
+      periods INTEGER NOT NULL,
+      fee_per_period REAL NOT NULL DEFAULT 0,
+      first_date TEXT NOT NULL,
+      category_id TEXT NOT NULL REFERENCES categories(id),
+      member_id TEXT NOT NULL REFERENCES members(id),
+      note TEXT,
+      payoff_date TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS assets (
       id TEXT PRIMARY KEY,
       type TEXT NOT NULL,
@@ -268,6 +283,21 @@ function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_medical_visit_medications_visit ON medical_visit_medications(visit_id);
   `);
   migrateAssetsTable();
+  migrateTransactionsTable();
+}
+
+// 给已存在的 transactions 表补齐分期相关列。幂等、只加列，不改动已有记账数据。
+function migrateTransactionsTable() {
+  const columns = sqlite.prepare("PRAGMA table_info(transactions)").all() as { name: string }[];
+  const existing = new Set(columns.map((c) => c.name));
+  const additions: Array<[string, string]> = [
+    ["installment_plan_id", "ALTER TABLE transactions ADD COLUMN installment_plan_id TEXT REFERENCES installment_plans(id)"],
+    ["installment_index", "ALTER TABLE transactions ADD COLUMN installment_index INTEGER"],
+  ];
+  for (const [name, ddl] of additions) {
+    if (!existing.has(name)) sqlite.exec(ddl);
+  }
+  sqlite.exec("CREATE INDEX IF NOT EXISTS idx_transactions_installment_plan ON transactions(installment_plan_id)");
 }
 
 // 给已存在的 assets 表补齐新列、迁移旧的 type 取值。幂等、非破坏，
@@ -344,6 +374,7 @@ async function start() {
   await app.register(analysisRoutes, { prefix: "/api/v1/analysis" });
   await app.register(dashboardRoutes, { prefix: "/api/v1/dashboard" });
   await app.register(transactionRoutes, { prefix: "/api/v1/transactions" });
+  await app.register(installmentRoutes, { prefix: "/api/v1/installments" });
   await app.register(assetRoutes, { prefix: "/api/v1/assets" });
   await app.register(liabilityRoutes, { prefix: "/api/v1/liabilities" });
   await app.register(insuranceRoutes, { prefix: "/api/v1/insurance" });
