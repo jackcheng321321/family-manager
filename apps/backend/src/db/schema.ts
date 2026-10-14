@@ -46,6 +46,9 @@ export const transactions = sqliteTable(
     source: text("source").notNull().default("admin"),
     aiRawInput: text("ai_raw_input"),
     aiConfidence: real("ai_confidence"),
+    // 分期消费生成的每期记录指向所属计划；普通记录为 null
+    installmentPlanId: text("installment_plan_id").references(() => installmentPlans.id),
+    installmentIndex: integer("installment_index"),
     createdAt: text("created_at").notNull().default("(datetime('now'))"),
     updatedAt: text("updated_at").notNull().default("(datetime('now'))"),
   },
@@ -54,8 +57,26 @@ export const transactions = sqliteTable(
     index("idx_transactions_type").on(table.type),
     index("idx_transactions_member").on(table.memberId),
     index("idx_transactions_category").on(table.categoryId),
+    index("idx_transactions_installment_plan").on(table.installmentPlanId),
   ]
 );
+
+// ---- 分期消费计划：保存时按期生成 transactions，统计口径自动按月分摊 ----
+
+export const installmentPlans = sqliteTable("installment_plans", {
+  id: text("id").primaryKey(),
+  description: text("description").notNull(),
+  totalAmount: real("total_amount").notNull(),
+  periods: integer("periods").notNull(),
+  feePerPeriod: real("fee_per_period").notNull().default(0),
+  firstDate: text("first_date").notNull(),
+  categoryId: text("category_id").notNull().references(() => categories.id),
+  memberId: text("member_id").notNull().references(() => members.id),
+  note: text("note"),
+  payoffDate: text("payoff_date"),
+  createdAt: text("created_at").notNull().default("(datetime('now'))"),
+  updatedAt: text("updated_at").notNull().default("(datetime('now'))"),
+});
 
 export const assets = sqliteTable("assets", {
   id: text("id").primaryKey(),

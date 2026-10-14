@@ -70,6 +70,10 @@ export interface Transaction {
   source: TransactionSource;
   aiRawInput: string | null;
   aiConfidence: number | null;
+  /** 所属分期计划；普通记录为 null */
+  installmentPlanId: string | null;
+  /** 第几期；提前还清的合并记录取被合并的第一期 */
+  installmentIndex: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,6 +82,32 @@ export interface TransactionWithRelations extends Transaction {
   category?: Category;
   account?: Account;
   member?: Member;
+  installmentPlan?: Pick<InstallmentPlan, "id" | "periods" | "payoffDate"> | null;
+}
+
+export interface InstallmentPlan {
+  id: string;
+  description: string;
+  /** 商品总价（不含手续费） */
+  totalAmount: number;
+  periods: number;
+  feePerPeriod: number;
+  firstDate: string;
+  categoryId: string;
+  memberId: string;
+  note: string | null;
+  payoffDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InstallmentPlanWithProgress extends InstallmentPlan {
+  /** 截至今天已扣款的期数（含提前还清合并的期数） */
+  paidPeriods: number;
+  /** 截至今天已扣款金额 */
+  paidAmount: number;
+  /** 尚未扣款金额 */
+  remainingAmount: number;
 }
 
 export interface Asset {
