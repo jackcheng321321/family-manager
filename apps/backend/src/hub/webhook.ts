@@ -302,7 +302,7 @@ async function processImageMessage(
 
   try {
     // The Hub media URL carries a one-time token, so download it immediately and
-    // pass the bytes inline to qwen3-vl-flash (DashScope can't reach the NAS URL).
+    // pass the bytes inline to qwen3.6-flash (DashScope can't reach the NAS URL).
     // The media endpoint requires the installation's app_token as a Bearer.
     const installation = db
       .select()

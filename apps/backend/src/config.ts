@@ -25,6 +25,6 @@ export const config = {
     baseUrl:
       process.env.DASHSCOPE_BASE_URL ||
       "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    vlModel: process.env.DASHSCOPE_VL_MODEL || "qwen3-vl-flash",
+    vlModel: process.env.DASHSCOPE_VL_MODEL || "qwen3.6-flash",
   },
 };

@@ -272,7 +272,7 @@ RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apk/re
 ```dotenv
 DASHSCOPE_API_KEY=sk-xxxx
 DASHSCOPE_BASE_URL=https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
-DASHSCOPE_VL_MODEL=qwen3-vl-flash
+DASHSCOPE_VL_MODEL=qwen3.6-flash
 ```
 
 `DASHSCOPE_BASE_URL` 推荐用业务空间专属域名（百炼控制台 → API Key 管理 复制 API Host）。旧域名 `dashscope.aliyuncs.com` 仍可调用，但自 2026-09-30 起不再支持新特性。专属域名只接受**同一业务空间**的 API Key，否则返回 401。

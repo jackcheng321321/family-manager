@@ -25,7 +25,7 @@ function getVisionModel(): string {
 }
 
 /**
- * Send an image (base64 data URL) to qwen3-vl-flash and let it extract a
+ * Send an image (base64 data URL) to qwen3.6-flash and let it extract a
  * transaction in one step via the shared record_transaction tool. Returns the
  * parsed transaction, or null if the image contains no bookkeeping info.
  */

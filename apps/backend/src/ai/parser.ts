@@ -67,7 +67,7 @@ export async function parseAndSaveMessage(
 /**
  * Persist a parsed transaction: normalize date, match category, find/create
  * member, insert the row, and build a reply. Shared by text/voice (DeepSeek)
- * and image (qwen3-vl-flash) input paths.
+ * and image (qwen3.6-flash) input paths.
  */
 export function finalizeAndSave(
   parsed: RawParsedTransaction,
