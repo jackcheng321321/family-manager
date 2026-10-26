@@ -87,6 +87,8 @@
 - **💬 打通微信，AI 一句话录入**：在微信里发「午饭花了 35」「收到工资 15000」，
   经 [OpenILink Hub](https://github.com/openilink/openilink-hub) 转发，AI 自动解析金额、类型、分类并入账。
   支持图片小票 / 截图识别（视觉模型直接解析）。
+- **📱 iPhone 快捷指令记账**：不开微信，在锁屏、控制中心、操作按钮或 Siri 上直接记一笔，也能把支付截图「分享」过来识别。
+  和微信记的账归到同一个成员名下，每人每台设备一把密钥。配置见 [docs/ios-shortcut.md](docs/ios-shortcut.md)。
 - **👨‍👩‍👧 多成员共用一个后端**：家里每个人的微信都可以绑到同一个服务，账目自动归到对应成员名下。
 - **🔒 数据私有化 / 自托管**：SQLite 单文件存储，跑在你自己的服务器或 NAS（飞牛 / 群晖 / 任意 Docker 主机）上，
   数据不经过任何第三方云。
@@ -202,6 +204,12 @@ docker compose up -d --build
 4. 在后台「系统设置」填入 Hub 地址即可。
 
 之后在微信里直接对机器人说话即可记账，内置 `/help`、`/recent`、`/balance` 命令。
+
+## 📱 iPhone 快捷指令记账（可选）
+
+不依赖微信。在后台「成员管理」给成员生成密钥，再在 iPhone「快捷指令」里点选几个操作就能用。
+接口是 `POST /api/v1/quick/record`，请求头带 `Authorization: Bearer <密钥>`，请求体可以是 JSON `{"text": "午饭 35"}`，也可以直接上传图片，返回纯文本结果。
+完整的图文步骤见 [docs/ios-shortcut.md](docs/ios-shortcut.md)。
 
 ## ❓ 常见问题
 

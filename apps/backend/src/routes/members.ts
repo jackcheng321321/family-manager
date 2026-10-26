@@ -1,9 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { db } from "../db/connection.js";
-import { members } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { members, memberTokens } from "../db/schema.js";
+import { desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { authGuard } from "../middleware/auth.js";
+import { generateMemberToken } from "../utils/member-token.js";
 
 export async function memberRoutes(app: FastifyInstance) {
   app.addHook("preHandler", authGuard);
@@ -47,6 +48,62 @@ export async function memberRoutes(app: FastifyInstance) {
 
       db.update(members).set(updates).where(eq(members.id, id)).run();
       return db.select().from(members).where(eq(members.id, id)).get();
+    }
+  );
+
+  // 快捷指令密钥：每个成员可以有多把（每台设备一把）。列表不返回明文和哈希。
+  app.get<{ Params: { id: string } }>("/:id/tokens", async (request) => {
+    return db
+      .select({
+        id: memberTokens.id,
+        memberId: memberTokens.memberId,
+        name: memberTokens.name,
+        tokenPrefix: memberTokens.tokenPrefix,
+        lastUsedAt: memberTokens.lastUsedAt,
+        createdAt: memberTokens.createdAt,
+      })
+      .from(memberTokens)
+      .where(eq(memberTokens.memberId, request.params.id))
+      .orderBy(desc(memberTokens.createdAt))
+      .all();
+  });
+
+  // 生成新密钥，明文只在这次响应里返回。
+  app.post<{ Params: { id: string }; Body: { name?: string } }>(
+    "/:id/tokens",
+    async (request, reply) => {
+      const member = db.select().from(members).where(eq(members.id, request.params.id)).get();
+      if (!member) return reply.status(404).send({ error: "Not found" });
+
+      const { token, tokenHash, tokenPrefix } = generateMemberToken();
+      const record = {
+        id: nanoid(),
+        memberId: member.id,
+        name: request.body?.name?.trim() || "iPhone 快捷指令",
+        tokenHash,
+        tokenPrefix,
+        lastUsedAt: null,
+        createdAt: new Date().toISOString(),
+      };
+      db.insert(memberTokens).values(record).run();
+      const { tokenHash: _hash, ...visible } = record;
+      return { ...visible, token };
+    }
+  );
+
+  app.delete<{ Params: { id: string; tokenId: string } }>(
+    "/:id/tokens/:tokenId",
+    async (request, reply) => {
+      const existing = db
+        .select()
+        .from(memberTokens)
+        .where(eq(memberTokens.id, request.params.tokenId))
+        .get();
+      if (!existing || existing.memberId !== request.params.id) {
+        return reply.status(404).send({ error: "Not found" });
+      }
+      db.delete(memberTokens).where(eq(memberTokens.id, existing.id)).run();
+      return { success: true };
     }
   );
 }

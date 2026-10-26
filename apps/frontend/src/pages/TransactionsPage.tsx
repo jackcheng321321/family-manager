@@ -10,6 +10,8 @@ const SOURCE_LABELS: Record<string, string> = {
   "wechat": "微信文字",
   "wechat-voice": "微信语音",
   "wechat-image": "微信图片",
+  "shortcut": "快捷指令",
+  "shortcut-image": "快捷指令截图",
 };
 
 function sourceLabel(source?: string): string {

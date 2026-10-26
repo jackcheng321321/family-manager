@@ -23,7 +23,13 @@ export type InsuranceCategory =
   | "other";
 export type AccountType = "cash" | "bank" | "alipay" | "wechat" | "credit" | "other";
 export type MemberRole = "admin" | "member";
-export type TransactionSource = "wechat" | "admin";
+export type TransactionSource =
+  | "wechat"
+  | "wechat-voice"
+  | "wechat-image"
+  | "shortcut"
+  | "shortcut-image"
+  | "admin";
 export type AssetFrequency = "monthly" | "quarterly" | "yearly" | "one-time";
 
 export interface Member {
@@ -34,6 +40,21 @@ export interface Member {
   role: MemberRole;
   createdAt: string;
   updatedAt: string;
+}
+
+/** 快捷指令等外部入口用的成员密钥，列表里不含明文 */
+export interface MemberToken {
+  id: string;
+  memberId: string;
+  name: string;
+  tokenPrefix: string;
+  lastUsedAt: string | null;
+  createdAt: string;
+}
+
+/** 刚生成的密钥，明文只返回这一次 */
+export interface CreatedMemberToken extends MemberToken {
+  token: string;
 }
 
 export interface Category {
