@@ -209,6 +209,7 @@ docker compose up -d --build
 
 不依赖微信。在后台「成员管理」给成员生成密钥，再在 iPhone「快捷指令」里点选几个操作就能用。
 接口是 `POST /api/v1/quick/record`，请求头带 `Authorization: Bearer <密钥>`，请求体可以是 JSON `{"text": "午饭 35"}`，也可以直接上传图片，返回纯文本结果。
+另有 `POST /api/v1/quick/preview`（只识别截图、不入账，返回 JSON 草稿）和 `POST /api/v1/quick/confirm`（确认后入账），用于「截屏 → 识别 → 弹窗确认」的流程。
 完整的图文步骤见 [docs/ios-shortcut.md](docs/ios-shortcut.md)。
 
 ## ❓ 常见问题
