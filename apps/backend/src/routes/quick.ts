@@ -283,7 +283,8 @@ async function recordImage(image: Buffer, memberId: string): Promise<ParseResult
   }
 
   const parsed = await parseImageTransaction(checked.dataUrl);
-  if (!parsed) {
+  // 和 /preview 同一个口径：读不出正数金额就当作不是账单，避免“截屏直接记”误记 0 元
+  if (!parsed || typeof parsed.amount !== "number" || !(parsed.amount > 0)) {
     return {
       success: false,
       replyMessage: "没在图片里识别到消费信息，可以直接说一句，或换一张更清晰的小票/账单截图",
