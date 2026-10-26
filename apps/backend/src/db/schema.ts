@@ -10,6 +10,22 @@ export const members = sqliteTable("members", {
   updatedAt: text("updated_at").notNull().default("(datetime('now'))"),
 });
 
+// 快捷指令等外部入口用的成员密钥。一个成员可以有多把（每台设备一把），
+// 只存 SHA-256 哈希，明文只在生成时返回一次。
+export const memberTokens = sqliteTable(
+  "member_tokens",
+  {
+    id: text("id").primaryKey(),
+    memberId: text("member_id").notNull().references(() => members.id),
+    name: text("name").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    tokenPrefix: text("token_prefix").notNull(),
+    lastUsedAt: text("last_used_at"),
+    createdAt: text("created_at").notNull().default("(datetime('now'))"),
+  },
+  (table) => [index("idx_member_tokens_member").on(table.memberId)]
+);
+
 export const categories = sqliteTable("categories", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),

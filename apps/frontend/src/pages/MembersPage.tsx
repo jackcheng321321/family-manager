@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { api } from "@/api/client";
 import type { Member } from "@caiwu/shared";
-import { Edit2, UserPlus } from "lucide-react";
+import { Edit2, KeyRound, UserPlus } from "lucide-react";
+import { ShortcutTokensDialog } from "./ShortcutTokensDialog";
 
 const ROLE_LABELS: Record<string, string> = { admin: "管理员", member: "成员" };
 
@@ -13,6 +14,7 @@ export function MembersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({ name: "", role: "member" });
   const [creating, setCreating] = useState(false);
+  const [tokenMember, setTokenMember] = useState<Member | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -52,7 +54,7 @@ export function MembersPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold">成员管理</h2>
-          <p className="text-sm text-muted-foreground">微信用户对话时自动注册；没有微信的成员（如小孩）可手动新增。</p>
+          <p className="text-sm text-muted-foreground">微信用户对话时自动注册；没有微信的成员（如小孩）可手动新增。点钥匙图标给成员生成 iPhone 快捷指令密钥，快捷指令记的账和微信记的账归到同一个人。</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-md text-sm">
           <UserPlus className="h-4 w-4" /> 新增成员
@@ -96,7 +98,12 @@ export function MembersPage() {
                       <button onClick={handleSave} className="px-2 py-1 bg-primary text-primary-foreground rounded text-xs">保存</button>
                       <button onClick={() => setEditingId(null)} className="px-2 py-1 border rounded text-xs">取消</button>
                     </div>
-                  ) : <button onClick={() => handleEdit(m)} className="p-1 hover:text-primary"><Edit2 className="h-4 w-4" /></button>}
+                  ) : (
+                    <div className="flex gap-1 justify-end">
+                      <button onClick={() => setTokenMember(m)} className="p-1 hover:text-primary" title="快捷指令密钥"><KeyRound className="h-4 w-4" /></button>
+                      <button onClick={() => handleEdit(m)} className="p-1 hover:text-primary" title="编辑"><Edit2 className="h-4 w-4" /></button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -104,6 +111,10 @@ export function MembersPage() {
         </table>
         </div>
       </div>
+
+      {tokenMember && (
+        <ShortcutTokensDialog member={tokenMember} onClose={() => setTokenMember(null)} />
+      )}
 
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

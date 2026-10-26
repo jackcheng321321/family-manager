@@ -22,6 +22,7 @@ import { accountRoutes } from "./routes/accounts.js";
 import { memberRoutes } from "./routes/members.js";
 import { settingRoutes } from "./routes/settings.js";
 import { messageRoutes } from "./routes/messages.js";
+import { quickEntryRoutes } from "./routes/quick.js";
 import { healthCheckupRoutes } from "./routes/health-checkups.js";
 import { medicalVisitRoutes } from "./routes/medical-visits.js";
 import { hubWebhookRoutes } from "./hub/webhook.js";
@@ -60,6 +61,16 @@ function initDatabase() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS member_tokens (
+      id TEXT PRIMARY KEY,
+      member_id TEXT NOT NULL REFERENCES members(id),
+      name TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      token_prefix TEXT NOT NULL,
+      last_used_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_member_tokens_member ON member_tokens(member_id);
     CREATE TABLE IF NOT EXISTS categories (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -384,6 +395,7 @@ async function start() {
   await app.register(memberRoutes, { prefix: "/api/v1/members" });
   await app.register(settingRoutes, { prefix: "/api/v1/settings" });
   await app.register(messageRoutes, { prefix: "/api/v1/messages" });
+  await app.register(quickEntryRoutes, { prefix: "/api/v1/quick" });
   await app.register(healthCheckupRoutes, { prefix: "/api/v1/health/checkups" });
   await app.register(medicalVisitRoutes, { prefix: "/api/v1/health/visits" });
 

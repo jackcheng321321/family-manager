@@ -17,9 +17,15 @@ export type RawParsedTransaction = ParsedTransaction & {
   transaction_date?: string;
 };
 
+/**
+ * Who the record belongs to: a WeChat sender id (the member is auto-created on
+ * first contact), or an existing member id resolved from a shortcut token.
+ */
+export type RecordSender = string | { memberId: string };
+
 export async function parseAndSaveMessage(
   rawMessage: string,
-  senderId: string,
+  sender: RecordSender,
   source = "wechat"
 ): Promise<ParseResult> {
   const systemPrompt = getParsePrompt();
@@ -48,7 +54,7 @@ export async function parseAndSaveMessage(
     }
 
     const parsed = JSON.parse(toolCall.function.arguments) as RawParsedTransaction;
-    return finalizeAndSave(parsed, senderId, rawMessage, source);
+    return finalizeAndSave(parsed, sender, rawMessage, source);
   } catch (error) {
     console.error("AI parse error:", error);
     return {
@@ -65,7 +71,7 @@ export async function parseAndSaveMessage(
  */
 export function finalizeAndSave(
   parsed: RawParsedTransaction,
-  senderId: string,
+  sender: RecordSender,
   rawInput: string,
   source: string
 ): ParseResult {
@@ -106,21 +112,9 @@ export function finalizeAndSave(
       (c) => c.name.includes("其他") && c.type === parsed.type
     )!;
 
-    // Find or create member
-    let member = db.select().from(members).where(eq(members.wechatUserId, senderId)).get();
+    const member = resolveMember(sender);
     if (!member) {
-      const memberId = nanoid();
-      db.insert(members)
-        .values({
-          id: memberId,
-          wechatUserId: senderId,
-          name: `微信用户_${senderId.slice(-4)}`,
-          role: "member",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
-        .run();
-      member = db.select().from(members).where(eq(members.id, memberId)).get()!;
+      return { success: false, replyMessage: "找不到对应的家庭成员，请在网页「成员管理」检查" };
     }
 
     // Save transaction
@@ -158,4 +152,27 @@ export function finalizeAndSave(
       replyMessage: "保存记录时出错，请稍后再试",
     };
   }
+}
+
+function resolveMember(sender: RecordSender) {
+  if (typeof sender !== "string") {
+    return db.select().from(members).where(eq(members.id, sender.memberId)).get();
+  }
+
+  // Find or create the member for a WeChat sender
+  const existing = db.select().from(members).where(eq(members.wechatUserId, sender)).get();
+  if (existing) return existing;
+
+  const memberId = nanoid();
+  db.insert(members)
+    .values({
+      id: memberId,
+      wechatUserId: sender,
+      name: `微信用户_${sender.slice(-4)}`,
+      role: "member",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+    .run();
+  return db.select().from(members).where(eq(members.id, memberId)).get();
 }
